@@ -24,12 +24,16 @@ public class AppInfoVO implements Comparable<AppInfoVO> {
   private String appId;
   private long updateTime;
   private long registrationTime;
+  private String version;
+  private String gitCommitId;
 
-  public AppInfoVO(String userName, String appId, long updateTime, long registrationTime) {
+  public AppInfoVO(String userName, String appId, long updateTime, long registrationTime, String version, String gitCommitId) {
     this.userName = userName;
     this.appId = appId;
     this.updateTime = updateTime;
     this.registrationTime = registrationTime;
+    this.version = version;
+    this.gitCommitId = gitCommitId;
   }
 
   public String getUserName() {
@@ -63,6 +67,10 @@ public class AppInfoVO implements Comparable<AppInfoVO> {
   public void setRegistrationTime(long registrationTime) {
     this.registrationTime = registrationTime;
   }
+
+  public String getVersion() { return version; }
+
+  public String getGitCommitId() { return gitCommitId; }
 
   @Override
   public int compareTo(AppInfoVO appInfoVO) {

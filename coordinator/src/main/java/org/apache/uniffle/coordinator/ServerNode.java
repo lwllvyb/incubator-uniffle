@@ -42,6 +42,8 @@ public class ServerNode implements Comparable<ServerNode> {
   private ServerStatus status;
   private Map<String, StorageInfo> storageInfo;
   private int nettyPort = -1;
+  private String version;
+  private String gitCommitId;
 
   public ServerNode(String id) {
     this(id, "", 0, 0, 0, 0, 0, Sets.newHashSet(), ServerStatus.EXCLUDED);
@@ -117,6 +119,31 @@ public class ServerNode implements Comparable<ServerNode> {
         storageInfoMap,
         -1);
   }
+  public ServerNode(
+          String id,
+          String ip,
+          int grpcPort,
+          long usedMemory,
+          long preAllocatedMemory,
+          long availableMemory,
+          int eventNumInFlush,
+          Set<String> tags,
+          ServerStatus status,
+          Map<String, StorageInfo> storageInfoMap,
+          int nettyPort) {
+    this(
+            id,
+            ip,
+            grpcPort,
+            usedMemory,
+            preAllocatedMemory,
+            availableMemory,
+            eventNumInFlush,
+            tags,
+            status,
+            storageInfoMap,
+            -1, "", "");
+  }
 
   public ServerNode(
       String id,
@@ -129,7 +156,9 @@ public class ServerNode implements Comparable<ServerNode> {
       Set<String> tags,
       ServerStatus status,
       Map<String, StorageInfo> storageInfoMap,
-      int nettyPort) {
+      int nettyPort,
+      String version,
+      String gitCommitId) {
     this.id = id;
     this.ip = ip;
     this.grpcPort = grpcPort;
@@ -145,6 +174,8 @@ public class ServerNode implements Comparable<ServerNode> {
     if (nettyPort > 0) {
       this.nettyPort = nettyPort;
     }
+    this.version = version;
+    this.gitCommitId = gitCommitId;
   }
 
   public ShuffleServerId convertToGrpcProto() {
@@ -224,12 +255,15 @@ public class ServerNode implements Comparable<ServerNode> {
         + eventNumInFlush
         + "], timestamp["
         + timestamp
-        + "], tags"
+        + "], tags["
         + tags.toString()
-        + ""
-        + ", status["
+        + "], status["
         + status
         + "], storages[num="
+        + storageInfo.size()
+        + "], version["
+        + version
+        + "], gitCommitId["
         + storageInfo.size()
         + "]";
   }
@@ -276,5 +310,13 @@ public class ServerNode implements Comparable<ServerNode> {
 
   public int getNettyPort() {
     return nettyPort;
+  }
+
+  public String getVersion() {
+    return version;
+  }
+
+  public String getGitCommitId() {
+    return gitCommitId;
   }
 }

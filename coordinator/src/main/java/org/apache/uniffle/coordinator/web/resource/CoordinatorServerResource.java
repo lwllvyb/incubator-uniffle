@@ -33,6 +33,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 import org.apache.uniffle.common.util.RssUtils;
 import org.apache.uniffle.common.web.resource.BaseResource;
 import org.apache.uniffle.common.web.resource.Response;
+import org.apache.uniffle.common.ProjectConstants;
 import org.apache.uniffle.coordinator.CoordinatorConf;
 import org.apache.uniffle.coordinator.CoordinatorServer;
 import org.apache.uniffle.coordinator.util.CoordinatorUtils;
@@ -77,6 +78,8 @@ public class CoordinatorServerResource extends BaseResource {
               "serverPort", String.valueOf(coordinatorConf.getInteger("rss.rpc.server.port", 0)));
           coordinatorServerInfo.put(
               "serverWebPort", String.valueOf(coordinatorConf.get(JETTY_HTTP_PORT)));
+          coordinatorServerInfo.put("version", ProjectConstants.VERSION);
+          coordinatorServerInfo.put("gitCommitId", ProjectConstants.REVISION);
           return coordinatorServerInfo;
         });
   }

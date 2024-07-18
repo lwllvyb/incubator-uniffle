@@ -308,6 +308,10 @@ public class SimpleClusterManager implements ClusterManager {
 
   @Override
   public List<ServerNode> list() {
+    for (Map.Entry<String, ServerNode> entry : servers.entrySet()) {
+      ServerNode server = entry.getValue();
+      LOG.info("TEST server id {} version {} gitCommitId {}", server.getId(), server.getVersion(), server.getGitCommitId());
+    }
     return Lists.newArrayList(servers.values());
   }
 

@@ -248,7 +248,8 @@ public class CoordinatorGrpcService extends CoordinatorServerGrpc.CoordinatorSer
       ApplicationInfoRequest request, StreamObserver<ApplicationInfoResponse> responseObserver) {
     String appId = request.getAppId();
     String user = request.getUser();
-    coordinatorServer.getApplicationManager().registerApplicationInfo(appId, user);
+    coordinatorServer.getApplicationManager().registerApplicationInfo(
+            appId, user, request.getVersion(), request.getGitCommitId());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got a registered application info: {}", appId);
     }
@@ -422,6 +423,7 @@ public class CoordinatorGrpcService extends CoordinatorServerGrpc.CoordinatorSer
         serverStatus = ServerStatus.UNHEALTHY;
       }
     }
+    LOG.info("TEST version {} gitCommitId {}", request.getVersion(), request.getGitCommitId());
     return new ServerNode(
         request.getServerId().getId(),
         request.getServerId().getIp(),
@@ -433,6 +435,8 @@ public class CoordinatorGrpcService extends CoordinatorServerGrpc.CoordinatorSer
         Sets.newHashSet(request.getTagsList()),
         serverStatus,
         StorageInfoUtils.fromProto(request.getStorageInfoMap()),
-        request.getServerId().getNettyPort());
+        request.getServerId().getNettyPort(),
+        request.getVersion(),
+        request.getGitCommitId());
   }
 }

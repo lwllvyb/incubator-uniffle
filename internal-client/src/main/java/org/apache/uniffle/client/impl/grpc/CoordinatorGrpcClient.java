@@ -55,6 +55,7 @@ import org.apache.uniffle.common.exception.RssException;
 import org.apache.uniffle.common.rpc.StatusCode;
 import org.apache.uniffle.common.storage.StorageInfo;
 import org.apache.uniffle.common.storage.StorageInfoUtils;
+import org.apache.uniffle.common.ProjectConstants;
 import org.apache.uniffle.proto.CoordinatorServerGrpc;
 import org.apache.uniffle.proto.CoordinatorServerGrpc.CoordinatorServerBlockingStub;
 import org.apache.uniffle.proto.RssProtos;
@@ -142,8 +143,11 @@ public class CoordinatorGrpcClient extends GrpcClient implements CoordinatorClie
             .addAllTags(tags)
             .setStatusValue(serverStatus.ordinal())
             .putAllStorageInfo(StorageInfoUtils.toProto(storageInfo))
+            .setVersion(ProjectConstants.VERSION)
+            .setGitCommitId(ProjectConstants.REVISION)
             .build();
 
+    LOG.info("TEST version {} gitCommitId {}", request.getVersion(), request.getGitCommitId());
     RssProtos.StatusCode status;
     ShuffleServerHeartBeatResponse response = null;
 
@@ -259,6 +263,8 @@ public class CoordinatorGrpcClient extends GrpcClient implements CoordinatorClie
         ApplicationInfoRequest.newBuilder()
             .setAppId(request.getAppId())
             .setUser(request.getUser())
+            .setVersion(ProjectConstants.VERSION)
+            .setGitCommitId(ProjectConstants.REVISION)
             .build();
     ApplicationInfoResponse rpcResponse =
         blockingStub

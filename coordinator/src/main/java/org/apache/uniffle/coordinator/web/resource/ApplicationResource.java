@@ -30,16 +30,19 @@ import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.Context;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
+import org.apache.uniffle.client.impl.grpc.CoordinatorGrpcClient;
 import org.apache.uniffle.common.web.resource.BaseResource;
 import org.apache.uniffle.common.web.resource.Response;
 import org.apache.uniffle.coordinator.AppInfo;
 import org.apache.uniffle.coordinator.ApplicationManager;
 import org.apache.uniffle.coordinator.web.vo.AppInfoVO;
 import org.apache.uniffle.coordinator.web.vo.UserAppNumVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Produces({MediaType.APPLICATION_JSON})
 public class ApplicationResource extends BaseResource {
-
+  private static final Logger LOG = LoggerFactory.getLogger(ApplicationResource.class);
   @Context protected ServletContext servletContext;
 
   @GET
@@ -85,12 +88,15 @@ public class ApplicationResource extends BaseResource {
             for (Map.Entry<String, AppInfo> appIdTimestampMap :
                 userAppIdTimestampMap.getValue().entrySet()) {
               AppInfo appInfo = appIdTimestampMap.getValue();
+              LOG.info("TEST appid {} version {} git commit id {}", appInfo.getAppId(), appInfo.getVersion(), appInfo.getGitCommitId());
               userToAppList.add(
                   new AppInfoVO(
                       userAppIdTimestampMap.getKey(),
                       appInfo.getAppId(),
                       appInfo.getUpdateTime(),
-                      appInfo.getRegistrationTime()));
+                      appInfo.getRegistrationTime(),
+                      appInfo.getVersion(),
+                      appInfo.getGitCommitId()));
             }
           }
           // Display is inverted by the submission time of the application.
