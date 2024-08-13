@@ -58,25 +58,26 @@ public class ShuffleBufferWithSkipList extends AbstractShuffleBuffer {
   }
 
   @Override
-  public long append(ShufflePartitionedData data) {
-    long size = 0;
-
-    synchronized (this) {
-      for (ShufflePartitionedBlock block : data.getBlockList()) {
-        // If sendShuffleData retried, we may receive duplicate block. The duplicate
-        // block would gc without release. Here we must release the duplicated block.
-        if (!blocksMap.containsKey(block.getBlockId())) {
-          blocksMap.put(block.getBlockId(), block);
-          blockCount++;
-          size += block.getSize();
-        } else {
-          block.getData().release();
-        }
-      }
-      this.size += size;
+  public synchronized long append(ShufflePartitionedData data) {
+    if (evicted) {
+      return BUFFER_EVICTED;
     }
+    long currentSize = 0;
 
-    return size;
+    for (ShufflePartitionedBlock block : data.getBlockList()) {
+      // If sendShuffleData retried, we may receive duplicate block. The duplicate
+      // block would gc without release. Here we must release the duplicated block.
+      if (!blocksMap.containsKey(block.getBlockId())) {
+        blocksMap.put(block.getBlockId(), block);
+        blockCount++;
+        currentSize += block.getSize();
+      } else {
+        block.getData().release();
+      }
+    }
+    this.size += currentSize;
+
+    return currentSize;
   }
 
   @Override
@@ -120,10 +121,11 @@ public class ShuffleBufferWithSkipList extends AbstractShuffleBuffer {
   }
 
   @Override
-  public long release() {
+  public synchronized long release() {
     Throwable lastException = null;
     int failedToReleaseSize = 0;
     long releasedSize = 0;
+    evicted = true;
     for (ShufflePartitionedBlock spb : blocksMap.values()) {
       try {
         spb.getData().release();
