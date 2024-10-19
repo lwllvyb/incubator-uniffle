@@ -51,6 +51,7 @@ import org.apache.uniffle.coordinator.ServerNode;
 import org.apache.uniffle.coordinator.web.request.ApplicationRequest;
 import org.apache.uniffle.coordinator.web.request.CancelDecommissionRequest;
 import org.apache.uniffle.coordinator.web.request.DecommissionRequest;
+import org.apache.uniffle.coordinator.web.vo.ServerNodeVO;
 
 @Produces({MediaType.APPLICATION_JSON})
 public class ServerResource extends BaseResource {
@@ -70,7 +71,7 @@ public class ServerResource extends BaseResource {
 
   @GET
   @Path("/nodes")
-  public Response<List<ServerNode>> nodes(@QueryParam("status") String status) {
+  public Response<List<ServerNodeVO>> nodes(@QueryParam("status") String status) {
     ClusterManager clusterManager = getClusterManager();
     List<ServerNode> serverList;
     if (ServerStatus.UNHEALTHY.name().equalsIgnoreCase(status)) {
@@ -96,8 +97,10 @@ public class ServerResource extends BaseResource {
                   return status == null || server.getStatus().name().equalsIgnoreCase(status);
                 })
             .collect(Collectors.toList());
-    serverList.sort(Comparator.comparing(ServerNode::getId));
-    return Response.success(serverList);
+    List<ServerNodeVO> serverListVO =
+        serverList.stream().map(ServerNode::convertToVO).collect(Collectors.toList());
+    serverListVO.sort(Comparator.comparing(ServerNodeVO::getId));
+    return Response.success(serverListVO);
   }
 
   @Authorization

@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 
 import org.apache.uniffle.common.ServerStatus;
 import org.apache.uniffle.common.storage.StorageInfo;
+import org.apache.uniffle.coordinator.web.vo.ServerNodeVO;
 import org.apache.uniffle.proto.RssProtos.ShuffleServerId;
 
 public class ServerNode implements Comparable<ServerNode> {
@@ -374,5 +375,26 @@ public class ServerNode implements Comparable<ServerNode> {
 
   public String getGitCommitId() {
     return gitCommitId;
+  }
+
+  public static ServerNodeVO convertToVO(ServerNode serverNode) {
+    return new ServerNodeVO(
+        serverNode.getId(),
+        serverNode.getIp(),
+        serverNode.getGrpcPort(),
+        serverNode.getUsedMemory(),
+        serverNode.getPreAllocatedMemory(),
+        serverNode.getAvailableMemory(),
+        serverNode.getEventNumInFlush(),
+        serverNode.getRegistrationTime(),
+        serverNode.getTimestamp(),
+        serverNode.getTags(),
+        serverNode.getStatus(),
+        serverNode.getStorageInfo(),
+        serverNode.getNettyPort(),
+        serverNode.getJettyPort(),
+        serverNode.getStartTime(),
+        serverNode.getVersion(),
+        serverNode.getGitCommitId());
   }
 }
