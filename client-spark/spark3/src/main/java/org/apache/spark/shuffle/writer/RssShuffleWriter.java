@@ -631,12 +631,18 @@ public class RssShuffleWriter<K, V, C> extends ShuffleWriter<K, V> {
     for (Long blockId : failedBlockIds) {
       List<TrackingBlockStatus> failedBlockStatus = failedTracker.getFailedBlockStatus(blockId);
       synchronized (failedBlockStatus) {
-        int retryIndex =
+        int retryCnt =
             failedBlockStatus.stream()
+                .filter(
+                    x -> {
+                      // If statusCode is null, the block was resent due to a stale assignment.
+                      // In this case, the retry count checking should be ignored.
+                      return x.getStatusCode() != null;
+                    })
                 .map(x -> x.getShuffleBlockInfo().getRetryCnt())
                 .max(Comparator.comparing(Integer::valueOf))
-                .get();
-        if (retryIndex >= blockFailSentRetryMaxTimes) {
+                .orElse(-1);
+        if (retryCnt >= blockFailSentRetryMaxTimes) {
           LOG.error(
               "Partial blocks for taskId: [{}] retry exceeding the max retry times: [{}]. Fast fail! faulty server list: {}",
               taskId,
@@ -862,7 +868,12 @@ public class RssShuffleWriter<K, V, C> extends ShuffleWriter<K, V> {
       // clear the previous retry state of block
       clearFailedBlockState(block);
       final ShuffleBlockInfo newBlock = block;
-      newBlock.incrRetryCnt();
+      // if the status code is null, it means the block is resent due to stale assignment, not
+      // because of the block send failure. In this case, the retry count should not be increased;
+      // otherwise it may cause unexpected fast failure.
+      if (blockStatus.getStatusCode() != null) {
+        newBlock.incrRetryCnt();
+      }
       newBlock.reassignShuffleServers(Arrays.asList(replacement));
       resendCandidates.add(newBlock);
     }
