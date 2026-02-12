@@ -79,7 +79,7 @@ public class TaskAttemptAssignmentTest {
   public void testUpdatePartitionSplitAssignment() {
     TaskAttemptAssignment assignment = new TaskAttemptAssignment(1, new MockShuffleHandleInfo());
     assertTrue(
-        assignment.updatePartitionSplitAssignment(
+        assignment.tryNextServerForSplitPartition(
             1, Arrays.asList(new ShuffleServerInfo("localhost", 122))));
   }
 }

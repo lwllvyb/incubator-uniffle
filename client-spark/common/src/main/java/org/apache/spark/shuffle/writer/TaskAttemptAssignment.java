@@ -88,7 +88,7 @@ public class TaskAttemptAssignment {
    * @param exclusiveServers
    * @return
    */
-  public boolean updatePartitionSplitAssignment(
+  public boolean tryNextServerForSplitPartition(
       int partitionId, List<ShuffleServerInfo> exclusiveServers) {
     if (hasBeenLoadBalanced(partitionId)) {
       Set<ShuffleServerInfo> servers =
