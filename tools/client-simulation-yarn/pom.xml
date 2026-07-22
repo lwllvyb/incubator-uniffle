@@ -59,7 +59,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
+      <artifactId>${hadoop.artifact.core}</artifactId>
       <scope>provided</scope>
     </dependency>
   </dependencies>
