@@ -72,7 +72,15 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	export KUBEBUILDER_ASSETS=$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCAL_DIR) -p path); \
+	set -e; \
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) $(ENVTEST_USE) -p path)"; \
+	export KUBEBUILDER_ASSETS; \
+	for bin in etcd kube-apiserver; do \
+		[ -x "$$KUBEBUILDER_ASSETS/$$bin" ] || [ -x "$$KUBEBUILDER_ASSETS/$$bin.exe" ] || { \
+			echo "envtest assets are incomplete: $$KUBEBUILDER_ASSETS/$$bin is missing" >&2; \
+			echo "re-download them with: $(ENVTEST) $(ENVTEST_USE) --force" >&2; \
+			exit 1; }; \
+	done; \
 	go test ./... -coverprofile cover.out
 
 .PHONY: build
@@ -114,9 +122,14 @@ kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
 
 ENVTEST = $(LOCAL_DIR)/setup-envtest
+# Shared by the path lookup in the test target and by the --force hint it prints,
+# so the two can't drift apart. --use-deprecated-gcs=false makes setup-envtest
+# resolve the assets through the controller-tools release index instead of
+# gs://kubebuilder-tools, which is no longer publicly readable.
+ENVTEST_USE = use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCAL_DIR) --use-deprecated-gcs=false
 .PHONY: envtest
 envtest: ## Download envtest-setup locally if necessary.
-	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230926180527-c93e2abcb28e)
+	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20240812162837-9557f1031fe4)
 
 GOIMPORTS = $(LOCAL_DIR)/goimports
 .PHONY: goimports
