@@ -22,12 +22,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import scala.Option;
+
 import org.apache.spark.Partitioner;
 import org.apache.spark.ShuffleDependency;
 import org.apache.spark.SparkConf;
 import org.apache.spark.shuffle.handle.ShuffleHandleInfo;
 import org.apache.spark.shuffle.handle.SimpleShuffleHandleInfo;
 import org.apache.spark.sql.internal.SQLConf;
+import org.apache.spark.storage.ShuffleBlockId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -159,6 +162,25 @@ public class RssShuffleManagerTest extends RssShuffleManagerTestBase {
     assertEquals(shuffleManager.getMaxFetchFailures(), 2);
     // by default, the appId is null
     assertNull(shuffleManager.getAppId());
+  }
+
+  @Test
+  public void testShuffleBlockResolver() {
+    setupMockedRssShuffleUtils(StatusCode.SUCCESS);
+
+    SparkConf conf = new SparkConf();
+    conf.set(RssSparkConfig.RSS_DYNAMIC_CLIENT_CONF_ENABLED.key(), "false");
+    conf.set(RssSparkConfig.RSS_COORDINATOR_QUORUM.key(), "m1:8001,m2:8002");
+    conf.set("spark.rss.storage.type", StorageType.LOCALFILE.name());
+    conf.set(RssSparkConfig.RSS_TEST_MODE_ENABLE, true);
+
+    RssShuffleManager shuffleManager = new RssShuffleManager(conf, true);
+    ShuffleBlockResolver blockResolver = shuffleManager.shuffleBlockResolver();
+
+    assertTrue(blockResolver.getBlocksForShuffle(1, 1L).isEmpty());
+    assertThrowsExactly(
+        RssException.class,
+        () -> blockResolver.getBlockData(new ShuffleBlockId(0, 0L, 0), Option.empty()));
   }
 
   @ParameterizedTest
