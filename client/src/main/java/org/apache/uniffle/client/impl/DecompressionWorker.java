@@ -60,6 +60,10 @@ public class DecompressionWorker {
 
   private final Optional<Semaphore> segmentPermits;
 
+  // Only accessed by the single consumer, which fetches batches and segments in order.
+  private int nextBatchToClean = 0;
+  private int nextSegmentToClean = 0;
+
   public DecompressionWorker(
       Codec codec, int threads, int fetchSecondsThreshold, int maxConcurrentDecompressionSegments) {
     if (codec == null) {
@@ -156,11 +160,13 @@ public class DecompressionWorker {
   public DecompressedShuffleBlock get(int batchIndex, int segmentIndex) {
     // guardedly safe to remove the previous batches if exist since the upstream will fetch the
     // segments in order
-    for (int i = 0; i < batchIndex; i++) {
-      ConcurrentHashMap<Integer, DecompressedShuffleBlock> prevBlocks = tasks.remove(i);
+    while (nextBatchToClean < batchIndex) {
+      ConcurrentHashMap<Integer, DecompressedShuffleBlock> prevBlocks =
+          tasks.remove(nextBatchToClean++);
       if (prevBlocks != null) {
         segmentPermits.ifPresent(x -> x.release(prevBlocks.values().size()));
       }
+      nextSegmentToClean = 0;
     }
 
     ConcurrentHashMap<Integer, DecompressedShuffleBlock> blocks = tasks.get(batchIndex);
@@ -170,13 +176,14 @@ public class DecompressionWorker {
 
     // guardedly safe to remove the previous segments if exist since the upstream will fetch the
     // segments in order
-    for (int i = 0; i < segmentIndex; i++) {
-      if (blocks.remove(i) != null) {
+    while (nextSegmentToClean < segmentIndex) {
+      if (blocks.remove(nextSegmentToClean++) != null) {
         segmentPermits.ifPresent(x -> x.release());
       }
     }
 
     DecompressedShuffleBlock block = blocks.remove(segmentIndex);
+    nextSegmentToClean = Math.max(nextSegmentToClean, segmentIndex + 1);
     // simplify the memory statistic logic here, just decrease the memory used when the block is
     // fetched, this is effective due to the upstream will use single-thread to get and release the
     // block
