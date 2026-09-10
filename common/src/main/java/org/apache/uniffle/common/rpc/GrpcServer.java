@@ -66,12 +66,21 @@ public class GrpcServer implements ServerInterface {
       RssBaseConf conf,
       List<Pair<BindableService, List<ServerInterceptor>>> servicesWithInterceptors,
       GRPCMetrics grpcMetrics) {
+    this(conf, servicesWithInterceptors, grpcMetrics, null);
+  }
+
+  private GrpcServer(
+      RssBaseConf conf,
+      List<Pair<BindableService, List<ServerInterceptor>>> servicesWithInterceptors,
+      GRPCMetrics grpcMetrics,
+      Integer threadPoolSize) {
     this.rssConf = conf;
     this.configuredPort = rssConf.getInteger(RssBaseConf.RPC_SERVER_PORT);
     this.servicesWithInterceptors = servicesWithInterceptors;
     this.grpcMetrics = grpcMetrics;
 
-    int rpcExecutorSize = conf.getInteger(RssBaseConf.RPC_EXECUTOR_SIZE);
+    int rpcExecutorSize =
+        threadPoolSize == null ? conf.getInteger(RssBaseConf.RPC_EXECUTOR_SIZE) : threadPoolSize;
     int queueSize = conf.getInteger(RssBaseConf.RPC_EXECUTOR_QUEUE_SIZE);
     pool =
         new GrpcThreadPoolExecutor(
@@ -84,8 +93,8 @@ public class GrpcServer implements ServerInterface {
             grpcMetrics);
     ThreadPoolManager.registerThreadPool(
         "Grpc",
-        () -> conf.getInteger(RssBaseConf.RPC_EXECUTOR_SIZE),
-        () -> conf.getInteger(RssBaseConf.RPC_EXECUTOR_SIZE) * 2,
+        () -> rpcExecutorSize,
+        () -> rpcExecutorSize * 2,
         () -> TimeUnit.MINUTES.toMillis(10),
         pool);
   }
@@ -141,6 +150,7 @@ public class GrpcServer implements ServerInterface {
 
     private RssBaseConf rssBaseConf;
     private GRPCMetrics grpcMetrics;
+    private Integer threadPoolSize;
 
     private List<Pair<BindableService, List<ServerInterceptor>>> servicesWithInterceptors =
         new ArrayList<>();
@@ -151,6 +161,12 @@ public class GrpcServer implements ServerInterface {
 
     public Builder conf(RssBaseConf rssBaseConf) {
       this.rssBaseConf = rssBaseConf;
+      return this;
+    }
+
+    /** Sets a fixed core thread count instead of using {@link RssBaseConf#RPC_EXECUTOR_SIZE}. */
+    public Builder threadPoolSize(int threadPoolSize) {
+      this.threadPoolSize = threadPoolSize;
       return this;
     }
 
@@ -165,7 +181,7 @@ public class GrpcServer implements ServerInterface {
     }
 
     public GrpcServer build() {
-      return new GrpcServer(rssBaseConf, servicesWithInterceptors, grpcMetrics);
+      return new GrpcServer(rssBaseConf, servicesWithInterceptors, grpcMetrics, threadPoolSize);
     }
   }
 
