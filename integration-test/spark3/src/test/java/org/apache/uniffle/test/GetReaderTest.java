@@ -56,6 +56,7 @@ import org.apache.uniffle.common.RemoteStorageInfo;
 import org.apache.uniffle.common.config.RssBaseConf;
 import org.apache.uniffle.common.rpc.ServerType;
 import org.apache.uniffle.common.util.Constants;
+import org.apache.uniffle.coordinator.ApplicationManager;
 import org.apache.uniffle.coordinator.CoordinatorConf;
 import org.apache.uniffle.storage.util.StorageType;
 
@@ -108,17 +109,7 @@ public class GetReaderTest extends IntegrationTestBase {
 
     SparkSession sparkSession = SparkSession.builder().config(sparkConf).getOrCreate();
     JavaSparkContext jsc1 = new JavaSparkContext(sparkSession.sparkContext());
-    JavaPairRDD<String, Tuple2<Integer, Integer>> javaPairRDD1 =
-        TestUtils.combineByKeyRDD(TestUtils.getRDD(jsc1));
-    ShuffleDependency<?, ?, ?> shuffleDependency1 =
-        (ShuffleDependency<?, ?, ?>) javaPairRDD1.rdd().dependencies().head();
-    RssShuffleHandle<?, ?, ?> rssShuffleHandle1 =
-        (RssShuffleHandle<?, ?, ?>) shuffleDependency1.shuffleHandle();
-    RemoteStorageInfo remoteStorageInfo1 = rssShuffleHandle1.getRemoteStorage();
-    assertEquals(remoteStorage1, remoteStorageInfo1.getPath());
-    assertTrue(remoteStorageInfo1.getConfItems().isEmpty());
-
-    // emptyRDD case
+    // Initialize the app ID with an empty RDD, which does not select remote storage.
     JavaPairRDD<String, Tuple2<Integer, Integer>> javaEmptyPairRDD1 =
         TestUtils.combineByKeyRDD(TestUtils.getEmptyRDD(jsc1));
     ShuffleDependency<?, ?, ?> emptyShuffleDependency1 =
@@ -129,6 +120,27 @@ public class GetReaderTest extends IntegrationTestBase {
     assertEquals(emptyRssShuffleHandle1.getPartitionToServers(), Collections.emptyMap());
     assertEquals(emptyRssShuffleHandle1.getRemoteStorage(), RemoteStorageInfo.EMPTY_REMOTE_STORAGE);
 
+    // Fix storage assignments so reader configuration is independent of health checks and ordering.
+    ApplicationManager applicationManager = coordinators.get(0).getApplicationManager();
+    applicationManager
+        .getAppIdToRemoteStorageInfo()
+        .put(
+            emptyRssShuffleHandle1.getAppId(),
+            applicationManager.getAvailableRemoteStorageInfo().get(remoteStorage1));
+    applicationManager
+        .getAppIdToRemoteStorageInfo()
+        .put("test2", applicationManager.getAvailableRemoteStorageInfo().get(remoteStorage2));
+
+    JavaPairRDD<String, Tuple2<Integer, Integer>> javaPairRDD1 =
+        TestUtils.combineByKeyRDD(TestUtils.getRDD(jsc1));
+    ShuffleDependency<?, ?, ?> shuffleDependency1 =
+        (ShuffleDependency<?, ?, ?>) javaPairRDD1.rdd().dependencies().head();
+    RssShuffleHandle<?, ?, ?> rssShuffleHandle1 =
+        (RssShuffleHandle<?, ?, ?>) shuffleDependency1.shuffleHandle();
+    RemoteStorageInfo remoteStorageInfo1 = rssShuffleHandle1.getRemoteStorage();
+    assertEquals(remoteStorage1, remoteStorageInfo1.getPath());
+    assertTrue(remoteStorageInfo1.getConfItems().isEmpty());
+
     // the same app would get the same storage info
     JavaPairRDD<String, Tuple2<Integer, Integer>> javaPairRDD2 =
         TestUtils.combineByKeyRDD(TestUtils.getRDD(jsc1));
@@ -137,7 +149,7 @@ public class GetReaderTest extends IntegrationTestBase {
     RssShuffleHandle<?, ?, ?> rssShuffleHandle2 =
         (RssShuffleHandle<?, ?, ?>) shuffleDependency2.shuffleHandle();
     RemoteStorageInfo remoteStorageInfo2 = rssShuffleHandle2.getRemoteStorage();
-    assertEquals(remoteStorage1, remoteStorageInfo1.getPath());
+    assertEquals(remoteStorage1, remoteStorageInfo2.getPath());
     assertTrue(remoteStorageInfo2.getConfItems().isEmpty());
 
     RssShuffleManager rssShuffleManager =
@@ -163,10 +175,8 @@ public class GetReaderTest extends IntegrationTestBase {
     ShuffleDependency<?, ?, ?> shuffleDependency =
         (ShuffleDependency<?, ?, ?>) javaPairRDD.rdd().dependencies().head();
     rssShuffleHandle = (RssShuffleHandle<?, ?, ?>) shuffleDependency.shuffleHandle();
-    // the reason for sleep here is to ensure that threads can be scheduled normally
-    Thread.sleep(500);
     RemoteStorageInfo remoteStorageInfo3 = rssShuffleHandle.getRemoteStorage();
-    assertEquals(remoteStorage1, remoteStorageInfo1.getPath());
+    assertEquals(remoteStorage2, remoteStorageInfo3.getPath());
     assertEquals(2, remoteStorageInfo3.getConfItems().size());
     assertEquals("v1", remoteStorageInfo3.getConfItems().get("k1"));
     assertEquals("v2", remoteStorageInfo3.getConfItems().get("k2"));
